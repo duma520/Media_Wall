@@ -52,7 +52,10 @@ echo    [i] icon.ico not found, skipping icon
 :icon_done
 
 echo [3/3] Building (first run takes 5-15 min, keep this window open)
-nuitka --standalone ^
+rem  nuitka on this machine is a .cmd wrapper. Calling another batch file
+rem  WITHOUT "call" transfers control away and the whole script ends there,
+rem  so the [3/3b] copy step below never runs. "call" is mandatory here.
+call nuitka --standalone ^
     --enable-plugin=pyside6 ^
     --windows-console-mode=disable ^
     --assume-yes-for-downloads ^
