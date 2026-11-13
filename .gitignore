@@ -29,6 +29,11 @@ version/
 # ---- 发布工作目录（打包 staging、zip、gh 请求体，本地临时用）----
 _publish/
 
+# ---- 截图工作目录（假媒体库 + Edge 用户配置 + 程序副本，本地临时用）----
+# 注意：里面有完整的 Edge profile（Cookies / Local Storage / History），
+# 绝不能进仓库。只提交最终产物 docs/screenshots/ 下的 7 张图。
+_screenshot_work/
+
 # ---- 编辑器 / 系统 ----
 .vscode/
 .idea/
