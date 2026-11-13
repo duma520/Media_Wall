@@ -26,6 +26,9 @@ __pycache__/
 # ---- 版本归档（本地保留，不进仓库）----
 version/
 
+# ---- 发布工作目录（打包 staging、zip、gh 请求体，本地临时用）----
+_publish/
+
 # ---- 编辑器 / 系统 ----
 .vscode/
 .idea/
