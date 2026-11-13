@@ -1,0 +1,35 @@
+# ---- 运行时数据（含真实台架扫描结果与真实文件名，绝不入库）----
+data/
+config.json
+gui_settings.json
+*.jsonl
+library.json
+library.js
+library.meta.json
+scan_progress.json
+sync_progress.json
+playcache/
+
+# ---- 构建产物 ----
+build_output/
+Media_Wall/
+*.build/
+*.dist/
+*.log
+
+# ---- Python 缓存 ----
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+
+# ---- 版本归档（本地保留，不进仓库）----
+version/
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store

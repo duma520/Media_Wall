@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Media_Wall 服务控制台</title>
+<style>
+:root{--bg:#1a1d24;--panel:#242936;--line:#39414f;--fg:#e8eaed;--dim:#9ca3af;--accent:#2563eb;--ok:#4ade80;--bad:#f87171}
+*{box-sizing:border-box}
+body{font-family:system-ui,"Microsoft YaHei",sans-serif;background:var(--bg);color:var(--fg);margin:0;padding:1rem}
+.wrap{max-width:600px;margin:0 auto}
+h1{font-size:1.4rem;margin:.5rem 0 1rem}
+h1 small{font-size:.75rem;color:var(--dim);font-weight:400}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1rem;margin:.8rem 0}
+.row{display:flex;gap:.6rem;flex-wrap:wrap;margin:.8rem 0}
+button{flex:1;min-width:120px;padding:.75rem;border:0;border-radius:9px;font-size:1rem;cursor:pointer;color:#fff;transition:.15s}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:not(:disabled):active{transform:scale(.97)}
+#st{font-size:1.2rem;font-weight:700}
+.ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:#fbbf24}
+.muted{color:var(--dim);font-size:.85rem;line-height:1.7}
+code{background:#1f2937;padding:2px 7px;border-radius:5px;font-size:.9em}
+a{color:#60a5fa;text-decoration:none}
+a:hover{text-decoration:underline}
+#msg{white-space:pre-wrap;font-size:.82rem;color:var(--dim);max-height:180px;overflow:auto;border-top:1px solid var(--line);padding-top:.6rem;margin-top:.6rem}
+.qr{display:flex;justify-content:center;margin:.6rem 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Media_Wall 服务控制台 <small id="ver"></small></h1>
+
+  <div class="card">
+    <div class="row"><span id="st">检测中…</span></div>
+    <div class="muted">主服务端口 <code id="port">8787</code> · 本机 <code id="lan">—</code></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button id="b-start" style="background:#2563eb" onclick="act('start')">▶ 启动服务</button>
+      <button id="b-restart" style="background:#d97706" onclick="act('restart')">🔄 重启服务</button>
+      <button id="b-stop" style="background:#dc2626" onclick="act('stop')">⏹ 停止服务</button>
+    </div>
+    <div class="muted">
+      启动/停止走 <code>watchdog:8786</code>（服务未运行也能用）；重启优先走主服务
+      <code>/api/restart</code>（自重启协议，不中断看门狗）。
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="muted" style="margin-bottom:.4rem">📱 手机/平板访问海报墙</div>
+    <div class="qr" id="qrbox"><span class="muted">加载二维码…</span></div>
+    <div class="muted">地址：<a id="url" href="#" target="_blank">—</a></div>
+    <div style="margin-top:.5rem;font-size:.8rem;color:var(--dim)">
+      也可打开看门狗控制台 <a id="wdurl" href="#" target="_blank">http://&lt;IP&gt;:8786/</a>（服务停止时可用）
+    </div>
+  </div>
+
+  <div class="card"><div id="msg">就绪</div></div>
+</div>
+
+<script>
+var MAIN_PORT = 8787, WD_PORT = 8786;
+var $ = function(id){ return document.getElementById(id); };
+
+function api(base, path, method){
+  return fetch(base + path, {method: method || 'GET', cache:'no-store'})
+    .then(function(r){ return r.json().catch(function(){ return {ok:false, error:'HTTP '+r.status}; }); })
+    .catch(function(e){ return {ok:false, error:String(e)}; });
+}
+function mainAlive(){ return api(location.origin, '/api/ping').then(function(j){ return j && j.ok; }); }
+function wdAlive(){ return api('http://' + (location.hostname || '127.0.0.1') + ':' + WD_PORT, '/api/status').then(function(j){ return !!(j && j.ok); }); }
+
+function refresh(){
+  var p = mainAlive();
+  var w = wdAlive();
+  Promise.all([p, w]).then(function(r){
+    var main = r[0], wd = r[1];
+    var st = $('st');
+    if(main){ st.textContent = '● 服务运行中'; st.className = 'ok'; }
+    else if(wd){ st.textContent = '○ 服务已停止（看门狗在线，可启动）'; st.className = 'warn'; }
+    else { st.textContent = '○ 服务已停止（看门狗未运行）'; st.className = 'bad'; }
+    $('b-start').disabled = main;
+    $('b-restart').disabled = !main && !wd;
+    $('b-stop').disabled = !main;
+  });
+}
+
+function act(a){
+  var m = $('msg');
+  m.textContent = '执行 ' + a + ' …';
+  var host = location.hostname || '127.0.0.1';
+  // 重启优先走主服务（自重启不中断）；否则走看门狗
+  var useMain = (a === 'restart');
+  var url = (useMain ? location.origin : 'http://' + host + ':' + WD_PORT) + '/api/' + a;
+  fetch(url, {method:'POST'}).then(function(r){ return r.json(); })
+    .then(function(j){ m.textContent = JSON.stringify(j, null, 2); refresh(); setTimeout(refresh, 2000); })
+    .catch(function(e){ m.textContent = '请求失败: ' + e.message; refresh(); });
+}
+
+// 二维码 + 局域网地址
+function loadInfo(){
+  api(location.origin, '/api/info').then(function(j){
+    if(j && j.url){
+      $('url').textContent = j.url; $('url').href = j.url;
+      $('lan').textContent = j.lan_ip || '—';
+      var qr = j.qr;
+      if(qr && qr.length){
+        var n = qr.length, cell = 6, rects = '';
+        for(var y=0;y<n;y++) for(var x=0;x<n;x++) if(qr[y][x])
+          rects += '<rect x="'+(x*cell)+'" y="'+(y*cell)+'" width="'+cell+'" height="'+cell+'"/>';
+        $('qrbox').innerHTML = '<svg viewBox="0 0 '+(n*cell)+' '+(n*cell)+'" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg" style="width:160px;background:#fff">' + rects + '</svg>';
+      } else {
+        $('qrbox').innerHTML = '<span class="muted">（本机未装 qrcode 库，用上方地址）</span>';
+      }
+      var host = j.lan_ip || '127.0.0.1';
+      $('wdurl').textContent = 'http://' + host + ':' + WD_PORT + '/';
+      $('wdurl').href = $('wdurl').textContent;
+    }
+  });
+}
+
+api(location.origin, '/api/status').then(function(j){
+  if(j && j.version){ $('ver').textContent = 'v' + j.version; }
+});
+loadInfo();
+refresh();
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>
