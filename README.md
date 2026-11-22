@@ -957,7 +957,7 @@ python -X utf8 -c "from mediawall.common import detect_lan_ip; print(detect_lan_
 
 ### 许可
 
-[MIT License](LICENSE) © 2026 楚庭杜玛
+[AGPL-3.0](LICENSE) © 2026 楚庭杜玛
 
 可自由使用、修改、分发，保留版权声明即可。
 
